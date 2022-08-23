@@ -2,6 +2,11 @@
 name = "hxml"
 version = "0.1.0"
 edition = "2021"
+authors = ["Baehyunsol <baehyunsol@naver.com>"]
+description = "XML Engine"
+license = "MIT"
+keywords = ["xml"]
+repository = "https://github.com/baehyunsol/HXML"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
