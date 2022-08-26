@@ -1,7 +1,9 @@
-pub mod raw_element;
+pub mod attribute;
 pub mod element;
 pub mod memory;
-pub mod attribute;
+pub mod pointer;
+pub mod prolog;
+pub mod raw_element;
 
 pub static mut ERRORS: Vec<String> = vec![];
 

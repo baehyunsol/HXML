@@ -24,6 +24,8 @@ impl GString {
 
     pub fn to_vec(&self) -> Vec<u16> {
         unsafe {
+            #[cfg(test)]
+            assert!(self.start > 0 && self.end >= self.start && self.end < GLOBAL_STRING.len());
             GLOBAL_STRING[self.start..self.end].to_vec()
         }
     }

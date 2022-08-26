@@ -1,11 +1,12 @@
-use crate::utils::{into_v16};
+use super::{get_processing_instruction_end_index, get_comment_end_index, get_name_end_index, get_eq_end_index};
+use crate::node::prolog::{DocTypeDecl, Prolog, XMLDecl};
 use crate::predicate::{
     is_alpha_cap,
     is_alpha_low,
     is_numeric,
     is_whitespace,
 };
-use super::{get_processing_instruction_end_index, get_comment_end_index, get_name_end_index, get_eq_end_index};
+use crate::utils::{from_v16, into_v16};
 
 // https://www.w3.org/TR/xml/#NT-prolog
 // xml_decl? miscellaneous* (doctype_decl miscellaneous*)?
@@ -334,6 +335,64 @@ pub fn get_doctype_decl_end_index(document: &[u16], mut index: usize) -> Option<
 // (markupdecl | DeclSep)*
 pub fn get_internal_subset_end_index(document: &[u16], mut index: usize) -> Option<usize> {
     todo!()
+}
+
+// it assumes that get_prolog_end_index(document, index) returns Some(..) for this args
+pub fn parse_prolog(document: &[u16], mut index: usize) -> (Prolog, usize) {  // (Prolog, end_index)
+
+    let begin_index = index;
+    let mut xml_decl = None;
+    let mut doctype_decl = None;
+
+    loop {
+
+        match get_miscellaneous_end_index(document, index) {
+            Some(miscellaneous_end_index) => {
+                index = miscellaneous_end_index + 1;
+                continue;
+            }
+            _ => {}
+        }
+
+        match get_xml_decl_end_index(document, index) {
+            Some(xml_decl_end_index) => {
+                xml_decl = Some(parse_xml_decl(document, index + 5));  // 5 for `<?xml`
+                index = xml_decl_end_index + 1;
+                continue;
+            }
+            _ => {}
+        }
+
+        match get_doctype_decl_end_index(document, index) {
+            Some(doctype_decl_end_index) => {
+                doctype_decl = Some(parse_doctype_decl(document, index + 9));  // 9 for `<!DOCTYPE`
+                index = doctype_decl_end_index + 1;
+                continue;
+            }
+            _ => {}
+        }
+
+        break;
+    }
+
+    (
+        Prolog::new(xml_decl, doctype_decl),
+        if begin_index == index { index } else { index - 1 }
+    )
+}
+
+pub fn parse_xml_decl(document: &[u16], index: usize) -> XMLDecl {
+    todo!()
+}
+
+pub fn parse_doctype_decl(document: &[u16], index: usize) -> DocTypeDecl {
+    #[cfg(test)]
+    assert!(is_whitespace(&document[index]));
+
+    let name_end_index = get_name_end_index(document, index + 1).unwrap();
+    let name = document[(index + 1)..(name_end_index + 1)].to_vec();
+
+    DocTypeDecl::new(from_v16(&name))
 }
 
 #[cfg(test)]

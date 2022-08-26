@@ -8,14 +8,16 @@ pub mod dom;
 #[cfg(test)]
 mod testbench;
 
-pub use node::element::Element;
+pub use node::element::{Content, Element};
+pub use node::pointer::ElementPtr;
+pub use node::prolog::Prolog;
 
 use node::{
     reset_errors,
     read_errors,
     memory::{self, allocate}
 };
-use parse::{get_prolog_end_index, parse_element};
+use parse::{get_prolog_end_index, parse_element, parse_prolog};
 use utils::into_v16;
 use gstring::set_global_string;
 
@@ -26,6 +28,10 @@ pub fn into_dom(document: String) -> Result<(), Vec<String>> {
 
     memory::init();
 
+    unsafe {
+        dom::prolog = None;
+    }
+
     let document = into_v16(&document);
     set_global_string(document.clone());
     reset_errors();
@@ -33,15 +39,19 @@ pub fn into_dom(document: String) -> Result<(), Vec<String>> {
     let mut curr_index = 0;
 
     match get_prolog_end_index(&document, curr_index) {
-        Some(ind) => { curr_index = ind + 1; },
+        Some(end_index) => {
+            unsafe {
+                dom::prolog = Some(parse_prolog(&document, curr_index).0);
+            }
+            curr_index = end_index + 1;
+        },
         None => {}
     }
 
     match parse_element(&document, curr_index) {
         Some((element, _)) => {
             let result = element.to_real();
-            let result_ptr = allocate(result);
-            memory::get_mut(result_ptr).set_parent_recursive();
+            result.set_parent_recursive();
             return Ok(());
         },
         None => {}
@@ -68,6 +78,7 @@ mod tests {
 
     #[test]
     fn file_test() {
+
         let mut f = File::open("test.html").unwrap();
         let mut s = String::new();
 
@@ -80,7 +91,7 @@ mod tests {
 
         if images.len() > 0 {
 
-            for img in images.iter_mut() {
+            for img in images.iter() {
 
                 match img.get_attribute("src".to_string()) {
                     Some(src) => {
@@ -91,25 +102,24 @@ mod tests {
 
             }
 
-            let mut body = &mut crate::dom::get_elements_by_tag_name(None, "body".to_string())[0];
-            let modal_box = crate::Element::from_string("<div id=\"modal-box\"><div id=\"close-button\">Click the image to close.</div><img id=\"modal-img\" onclick=\"close_modal_img();\"/></div>".to_string()).unwrap();
-            let script = crate::Element::from_string("<script>/*<![CDATA[*/var modal_box = document.getElementById(\"modal-box\");var modal_img = document.getElementById(\"modal-img\");
-    function open_modal_img(src) {
-        modal_img.src = src;
-        modal_box.style.display = \"block\";
-    }
-    function close_modal_img() {
-        modal_box.style.display = \"none\";
-    }/*]]>*/</script>".to_string()).unwrap();
-            body.add_element_ptr(modal_box);
-            body.add_element_ptr(script);
+            let body = crate::dom::get_elements_by_tag_name(None, "body".to_string())[0];
+            let modal_box = "<div id=\"modal-box\"><div id=\"close-button\">Click the image to close.</div><img id=\"modal-img\" onclick=\"close_modal_img();\"/></div><script>/*<![CDATA[*/var modal_box = document.getElementById(\"modal-box\");var modal_img = document.getElementById(\"modal-img\");
+function open_modal_img(src) {
+    modal_img.src = src;
+    modal_box.style.display = \"block\";
+}
+function close_modal_img() {
+    modal_box.style.display = \"none\";
+}/*]]>*/</script>".to_string();
+
+            let xx = crate::node::element::Content::from_string(modal_box).unwrap();
+
+            body.add_contents(xx);
+            //println!("!lib.rs <<{}>> {}\n{}\n\n", body.ptr, crate::node::memory::get(body.ptr).contents.len(), body.to_string());
         }
 
-        let r = crate::dom::get_root();
-
         let mut f = File::create("test copy.html").unwrap();
-        f.write_all(r.to_string().as_bytes()).unwrap();
-        //panic!("{}", r.to_string());
+        f.write_all(crate::dom::to_string().as_bytes()).unwrap();
     }
 
 }

@@ -3,11 +3,12 @@ use super::{
     read_errors, reset_errors
 };
 use super::memory::{
-    self, ElementPtr,
+    self,
     allocate, get_mut
 };
+use super::pointer::ElementPtr;
 use crate::gstring::set_global_string;
-use crate::parse::parse_element;
+use crate::parse::{parse_content, parse_element};
 use crate::utils::into_v16;
 use std::collections::HashSet;
 
@@ -42,10 +43,57 @@ impl Content {
         Content::Reference(reference)
     }
 
-    pub fn to_string(&self) -> String {
+    pub fn from_string(string: String) -> Result<Vec<Content>, Vec<String>> {
+        let string_v16 = into_v16(&string);
+        set_global_string(string_v16.clone());
+        reset_errors();
 
+        let mut curr_index = 0;
+        let mut result = vec![];
+
+        while curr_index < string_v16.len() {
+
+            match parse_content(&string_v16, curr_index) {
+                Some((content, last_index)) => {
+                    let real_content = content.to_real();
+
+                    match &real_content {
+                        Content::Element(ptr) => {
+                            ptr.set_parent_recursive();
+                        }
+                        _ => {}
+                    }
+
+                    result.push(real_content);
+                    curr_index = last_index + 1;
+                },
+                None => {
+                    return Err(vec![String::from("failed to parse an XML string...")]);
+                }
+            }
+
+        }
+
+        if result.len() > 0 {
+            return Ok(result);
+        }
+
+        let errors = read_errors();
+
+        // reset global states
+        set_global_string(vec![]);
+        reset_errors();
+
+        if errors.len() > 0 {
+            return Err(errors);
+        }
+
+        return Err(vec![String::from("No Contents have been found!")]);
+    }
+
+    pub fn to_string(&self) -> String {
         match self {
-            Content::Element(pointer) => memory::get(*pointer).to_string(),
+            Content::Element(pointer) => pointer.to_string(),
             Content::CharData(char_data) => char_data.clone(),
             Content::CDSect(cd_sect) => format!("<![CDATA[{}]]>", cd_sect),
             Content::Comment(comment) => format!("<!--{}-->", comment),
@@ -75,7 +123,7 @@ pub struct Element {
 
 impl Element {
 
-    pub fn new(tag_name: String, attributes: Vec<Attribute>, empty_element: bool, contents: Vec<Content>) -> Self {
+    pub fn new(tag_name: String, attributes: Vec<Attribute>, empty_element: bool, contents: Vec<Content>) -> ElementPtr {
 
         let mut id = None;
         let mut classes = vec![];
@@ -94,13 +142,15 @@ impl Element {
 
         }
 
-        Element {
-            pointer: 0,
+        let result = Element {
+            pointer: ElementPtr::null(),
             parent: None,
             is_alive: true,
             tag_name, attributes, empty_element, contents,
             id, classes
-        }
+        };
+
+        allocate(result)
     }
 
     pub fn from_string(string: String) -> Result<ElementPtr, Vec<String>> {
@@ -108,38 +158,50 @@ impl Element {
         let string_v16 = into_v16(&string);
         set_global_string(string_v16.clone());
         reset_errors();
-    
+
         match parse_element(&string_v16, 0) {
             Some((element, _)) => {
-                let mut result = element.to_real();
-                let result_ptr = allocate(result);
-                get_mut(result_ptr).set_parent_recursive();
-                return Ok(result_ptr);
+                let result = element.to_real();
+                result.set_parent_recursive();
+                return Ok(result);
             },
-            None => {}
+            None => {
+                return Err(vec![String::from("Failed to parse an element!")]);
+            }
         }
-    
+
         let errors = read_errors();
-    
+
         // reset global states
         set_global_string(vec![]);
         reset_errors();
-    
+
         if errors.len() > 0 {
             return Err(errors);
         }
-    
-        return Err(vec![String::from("No Elements have found!")]);
-    
+
+        return Err(vec![String::from("No Elements have been found!")]);
     }
 
-    pub fn add_element(&mut self, mut element: Element) {
-        element.parent = Some(self.pointer);
-        self.contents.push(Content::new_element(element));
+    pub fn add_contents(&mut self, contents: Vec<Content>) {
+        //println!("!element.rs <<{}>> {} \n {}\n\n", self.pointer.ptr, self.contents.len(), self.to_string());
+
+        for content in contents.into_iter() {
+            match content {
+                Content::Element(ptr) => {
+                    self.add_element_ptr(ptr);
+                },
+                _ => {
+                    self.contents.push(content);
+                }
+            }
+        }
+
+        //println!("!element.rs <<{}>> {} \n {}\n\n", self.pointer.ptr, self.contents.len(), self.to_string());
     }
 
     pub fn add_element_ptr(&mut self, element_ptr: ElementPtr) {
-        get_mut(element_ptr).parent = Some(self.pointer);
+        element_ptr.set_parent(self.pointer);
         self.contents.push(Content::Element(element_ptr));
     }
 
@@ -197,14 +259,27 @@ impl Element {
         true
     }
 
-    pub fn get_children(&self) -> Vec<&Element> {
+    pub fn get_parent(&self) -> Option<ElementPtr> {
+
+        match self.parent {
+            Some(pointer) => Some(pointer),
+            None => None
+        }
+
+    }
+
+    pub fn set_parent(&mut self, parent: ElementPtr) {
+        self.parent = Some(parent);
+    }
+
+    pub fn get_children(&self) -> Vec<ElementPtr> {
         let mut result = Vec::with_capacity(self.contents.len());
 
         for content in self.contents.iter() {
 
             match content {
                 Content::Element(pointer) => {
-                    result.push(memory::get(*pointer));
+                    result.push(*pointer);
                 },
                 _ => {}
             }
@@ -212,49 +287,13 @@ impl Element {
         }
 
         result
-    }
-
-    pub fn get_children_mut(&mut self) -> Vec<&mut Element> {
-        let mut result = Vec::with_capacity(self.contents.len());
-
-        for content in self.contents.iter() {
-
-            match content {
-                Content::Element(pointer) => {
-                    result.push(memory::get_mut(*pointer));
-                },
-                _ => {}
-            }
-
-        }
-
-        result
-    }
-
-    pub fn get_parent(&self) -> Option<&Element> {
-
-        match self.parent {
-            Some(pointer) => Some(memory::get(pointer)),
-            None => None
-        }
-
-    }
-
-    pub fn get_parent_mut(&mut self) -> Option<&mut Element> {
-
-        match self.parent {
-            Some(pointer) => Some(memory::get_mut(pointer)),
-            None => None
-        }
-
     }
 
     // root element는 이거 꼭 호출해서 init해줘야 함.
     pub fn set_parent_recursive(&mut self) {
-        let self_pointer = self.pointer;
 
-        for child in self.get_children_mut() {
-            child.parent = Some(self_pointer);
+        for child in self.get_children() {
+            child.set_parent(self.pointer);
             child.set_parent_recursive();
         }
 
@@ -287,11 +326,12 @@ impl Element {
         } else {
             format!("</{}>", self.tag_name)
         };
+        let contents = self.contents.iter().map(|c| c.to_string()).collect::<Vec<String>>().concat();
 
         format!(
             "{}{}{}",
             opening_tag,
-            self.contents.iter().map(|c| c.to_string()).collect::<Vec<String>>().concat(),
+            contents,
             closing_tag
         )
     }

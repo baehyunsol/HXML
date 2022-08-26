@@ -1,17 +1,21 @@
 use crate::node::{
-    memory::ELEMENTS,
-    element::Element
+    element::Element,
+    memory::{ELEMENTS, self},
+    pointer::ElementPtr,
+    prolog::Prolog
 };
 use std::collections::HashSet;
 
-pub fn get_all_elements() -> Vec<&'static Element> {
+pub static mut prolog: Option<Prolog> = None;
+
+pub fn get_all_elements() -> Vec<ElementPtr> {
     unsafe {
-        ELEMENTS.iter().filter(|e| e.is_alive).collect()
+        ELEMENTS.iter().filter(|e| e.is_alive).map(|e| e.pointer).collect()
     }
 }
 
 /// if `elements` is None, it searches the entire DOM.
-pub fn get_element_by_id(elements: Option<Vec<&mut Element>>, id: String) -> Option<&mut Element> {
+pub fn get_element_by_id(elements: Option<Vec<ElementPtr>>, id: String) -> Option<ElementPtr> {
 
     match elements {
         None => {
@@ -23,18 +27,19 @@ pub fn get_element_by_id(elements: Option<Vec<&mut Element>>, id: String) -> Opt
                     }
 
                     if element.id.as_ref().unwrap() == &id {
-                        return Some(element);
+                        return Some(element.pointer);
                     }
 
                 }
             }
         }
-        Some(mut elements) => {
+        Some(elements) => {
 
             for element in elements.into_iter() {
+                let el = memory::get(element.ptr);
 
-                if element.id.is_some() && element.id.as_ref().unwrap() == &id {
-                    return Some(element);
+                if el.id.is_some() && el.id.as_ref().unwrap() == &id {
+                    return Some(el.pointer);
                 }
 
             }
@@ -46,7 +51,7 @@ pub fn get_element_by_id(elements: Option<Vec<&mut Element>>, id: String) -> Opt
 }
 
 /// if `elements` is None, it searches the entire DOM.
-pub fn get_ids(elements: Option<Vec<&mut Element>>) -> Vec<String> {
+pub fn get_ids(elements: Option<Vec<ElementPtr>>) -> Vec<String> {
 
     match elements {
         None => unsafe {
@@ -58,36 +63,36 @@ pub fn get_ids(elements: Option<Vec<&mut Element>>) -> Vec<String> {
                 }
             ).collect()
         }
-        Some(elements) => elements.iter().filter_map(|e| e.id.clone()).collect()
+        Some(elements) => elements.into_iter().filter_map(|e| memory::get(e.ptr).id.clone()).collect()
     }
 
 }
 
 /// if `elements` is None, it searches the entire DOM.
-pub fn get_elements_by_tag_name(elements: Option<Vec<&mut Element>>, tag_name: String) -> Vec<&mut Element> {
+pub fn get_elements_by_tag_name(elements: Option<Vec<ElementPtr>>, tag_name: String) -> Vec<ElementPtr> {
 
     match elements {
         None => unsafe {
-            ELEMENTS.iter_mut().filter(|e| e.is_alive && e.tag_name == tag_name).collect()
+            ELEMENTS.iter_mut().filter(|e| e.is_alive && e.tag_name == tag_name).map(|e| e.pointer).collect()
         },
-        Some(elements) => elements.into_iter().filter(|e| e.tag_name == tag_name).collect()
+        Some(elements) => elements.into_iter().filter(|e| memory::get(e.ptr).tag_name == tag_name).collect()
     }
 
 }
 
 /// if `elements` is None, it searches the entire DOM.
-pub fn get_elements_by_class_name(elements: Option<Vec<&mut Element>>, class_name: String) -> Vec<&mut Element> {
+pub fn get_elements_by_class_name(elements: Option<Vec<ElementPtr>>, class_name: String) -> Vec<ElementPtr> {
 
     match elements {
         None => unsafe {
-            ELEMENTS.iter_mut().filter(|e| e.is_alive && e.classes.contains(&class_name)).collect()
+            ELEMENTS.iter_mut().filter(|e| e.is_alive && e.classes.contains(&class_name)).map(|e| e.pointer).collect()
         },
-        Some(elements) => elements.into_iter().filter(|e| e.classes.contains(&class_name)).collect()
+        Some(elements) => elements.into_iter().filter(|e| memory::get(e.ptr).classes.contains(&class_name)).collect()
     }
 
 }
 
-pub fn get_root() -> &'static Element {
+pub fn get_root() -> ElementPtr {
 
     unsafe {
         let mut curr_element = &ELEMENTS[0];
@@ -101,6 +106,8 @@ pub fn get_root() -> &'static Element {
 
         }
 
+        let mut curr_element = curr_element.pointer;
+
         while let Some(parent) = curr_element.get_parent() {
             curr_element = parent;
         }
@@ -108,6 +115,29 @@ pub fn get_root() -> &'static Element {
         curr_element
     }
 
+}
+
+pub fn to_string() -> String {
+
+    for e in get_all_elements() {
+        //println!("<<{}>> {}\n {}\n\n", memory::get(e.ptr).pointer.ptr, memory::get(e.ptr).contents.len(), e.to_string());
+    }
+
+    let prolog_text = unsafe {
+        match &prolog {
+            Some(p) => p.to_string(),
+            None => String::new()
+        }
+    };
+    let ee = get_root();
+    let element_text = ee.to_string();
+    //let element_text = get_root().to_string();
+
+    format!(
+        "{}{}",
+        prolog_text,
+        element_text
+    )
 }
 
 /// It checks whether

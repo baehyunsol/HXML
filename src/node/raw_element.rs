@@ -1,6 +1,7 @@
+use super::attribute::Attribute;
 use super::element::{Element, Content};
 use super::memory::allocate;
-use super::attribute::Attribute;
+use super::pointer::ElementPtr;
 use crate::gstring::GString;
 
 pub enum RawContent {
@@ -15,7 +16,7 @@ impl RawContent {
 
     pub fn to_real(&self) -> Content {
         match self {
-            RawContent::Element(e) => Content::Element(allocate(e.to_real())),
+            RawContent::Element(e) => Content::Element(e.to_real()),
             RawContent::CharData(c) => Content::CharData(c.to_string()),
             RawContent::CDSect(c) => Content::CDSect(c.to_string()),
             RawContent::Comment(c) => Content::Comment(c.to_string()),
@@ -40,7 +41,7 @@ impl RawElement {
         }
     }
 
-    pub fn to_real(&self) -> Element {
+    pub fn to_real(&self) -> ElementPtr {
         Element::new(
             self.tag_name.to_string(),
             self.attributes.iter().map(
