@@ -43,11 +43,11 @@ pub fn get_char_reference_end_index(document: &[u16], mut index: usize) -> Optio
         index += 1;
         let num_begin_index = index;
 
-        while is_hexadecimal(&document[index]) {
+        while index < document.len() && is_hexadecimal(&document[index]) {
             index += 1;
         }
 
-        if document[index] == ';' as u16 {
+        if index < document.len() && document[index] == ';' as u16 {
             let num_end_index = index;
 
             match to_int_hex(&document[num_begin_index..num_end_index]) {
@@ -66,11 +66,11 @@ pub fn get_char_reference_end_index(document: &[u16], mut index: usize) -> Optio
     else if is_numeric(&document[index]) {
         let num_begin_index = index;
 
-        while is_numeric(&document[index]) {
+        while index < document.len() && is_numeric(&document[index]) {
             index += 1;
         }
 
-        if document[index] == ';' as u16 {
+        if index < document.len() && document[index] == ';' as u16 {
             let num_end_index = index;
 
             match to_int_dec(&document[num_begin_index..num_end_index]) {
@@ -88,6 +88,64 @@ pub fn get_char_reference_end_index(document: &[u16], mut index: usize) -> Optio
 
     else {
         None
+    }
+
+}
+
+
+#[cfg(test)]
+mod tests {
+    use crate::parse::*;
+    use crate::testbench::*;
+
+    #[test]
+    fn entity_reference_test() {
+        get_xxx_end_index(
+            vec![
+                ("not a entity_reference", None),
+                ("&;", None),
+                ("&#;", None),
+                ("&#x;", None),
+                ("&nbsp;", Some(5)),
+                ("&nbsp", None),
+                ("&#123;", None),
+                ("&#123", None),
+                ("&#x123;", None),
+                ("&#x123", None),
+                ("&#x10fa;", None),
+                ("&#x10fa", None),
+                ("&#x10xy;", None),
+                ("&#x10xy", None),
+                ("&#1234567890;", None),
+                ("&#1234567890", None),
+            ],
+            get_entity_reference_end_index
+        );
+    }
+
+    #[test]
+    fn char_reference_test() {
+        get_xxx_end_index(
+            vec![
+                ("not a char_reference", None),
+                ("&;", None),
+                ("&#;", None),
+                ("&#x;", None),
+                ("&nbsp;", None),
+                ("&nbsp", None),
+                ("&#123;", Some(5)),
+                ("&#123", None),
+                ("&#x123;", Some(6)),
+                ("&#x123", None),
+                ("&#x10fa;", Some(7)),
+                ("&#x10fa", None),
+                ("&#x10xy;", None),
+                ("&#x10xy", None),
+                ("&#1234567890;", None),
+                ("&#1234567890", None),
+            ],
+            get_char_reference_end_index
+        );
     }
 
 }

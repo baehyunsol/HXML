@@ -64,3 +64,10 @@ impl ElementPtr {
     }
 
 }
+
+impl PartialEq for ElementPtr {
+    fn eq(&self, other: &ElementPtr) -> bool {
+        self.ptr != super::pointer::NULL
+        && self.ptr == other.ptr
+    }
+}

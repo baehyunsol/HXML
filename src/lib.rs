@@ -23,7 +23,7 @@ use gstring::set_global_string;
 
 /// It's global.
 /// You can't handle multiple doms at once.
-/// It frees all the elements created so far.
+/// It frees all the elements created before.
 pub fn into_dom(document: String) -> Result<(), Vec<String>> {
 
     memory::init();
@@ -87,7 +87,7 @@ mod tests {
         crate::into_dom(s).unwrap();
         crate::dom::some_checks().unwrap();
 
-        let mut images = crate::dom::get_elements_by_tag_name(None, "img".to_string());
+        let images = crate::dom::get_elements_by_tag_name(None, "img".to_string());
 
         if images.len() > 0 {
 
@@ -102,7 +102,7 @@ mod tests {
 
             }
 
-            let body = crate::dom::get_elements_by_tag_name(None, "body".to_string())[0];
+            let body = crate::dom::get_element_by_tag_name(None, "body".to_string()).unwrap();
             let modal_box = "<div id=\"modal-box\"><div id=\"close-button\">Click the image to close.</div><img id=\"modal-img\" onclick=\"close_modal_img();\"/></div><script>/*<![CDATA[*/var modal_box = document.getElementById(\"modal-box\");var modal_img = document.getElementById(\"modal-img\");
 function open_modal_img(src) {
     modal_img.src = src;
@@ -115,7 +115,6 @@ function close_modal_img() {
             let xx = crate::node::element::Content::from_string(modal_box).unwrap();
 
             body.add_contents(xx);
-            //println!("!lib.rs <<{}>> {}\n{}\n\n", body.ptr, crate::node::memory::get(body.ptr).contents.len(), body.to_string());
         }
 
         let mut f = File::create("test copy.html").unwrap();

@@ -1,1 +1,2 @@
-모든 걸 다 `ElementPtr`로 처리하면 번거로움. 매번 `memory::get(ptr).do_str()`를 하잖아. 그럴 바에는 wrapper를 만들어서 `ptr.do_sth()`가 바로 가능하도록 구현하자!
+script가 여러개 있으면 하나로 합치기!
+- 이러려면 element를 삭제하는 기능을 추가해야함

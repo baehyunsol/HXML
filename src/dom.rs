@@ -73,11 +73,43 @@ pub fn get_elements_by_tag_name(elements: Option<Vec<ElementPtr>>, tag_name: Str
 
     match elements {
         None => unsafe {
-            ELEMENTS.iter_mut().filter(|e| e.is_alive && e.tag_name == tag_name).map(|e| e.pointer).collect()
+            ELEMENTS.iter().filter(|e| e.is_alive && e.tag_name == tag_name).map(|e| e.pointer).collect()
         },
         Some(elements) => elements.into_iter().filter(|e| memory::get(e.ptr).tag_name == tag_name).collect()
     }
 
+}
+
+/// if `elements` is None, it searches the entire DOM.
+/// It returns the first element with the given tag_name, if exists.
+pub fn get_element_by_tag_name(elements: Option<Vec<ElementPtr>>, tag_name: String) -> Option<ElementPtr> {
+
+    match elements {
+        None => unsafe {
+
+            for element in ELEMENTS.iter() {
+
+                if element.is_alive && element.tag_name == tag_name {
+                    return Some(element.pointer);
+                }
+
+            }
+
+        },
+        Some(elements) => {
+
+            for element in elements.iter() {
+
+                if memory::get(element.ptr).is_alive && memory::get(element.ptr).tag_name == tag_name {
+                    return Some(*element);
+                }
+            
+            }
+
+        }
+    }
+
+    None
 }
 
 /// if `elements` is None, it searches the entire DOM.
@@ -118,10 +150,6 @@ pub fn get_root() -> ElementPtr {
 }
 
 pub fn to_string() -> String {
-
-    for e in get_all_elements() {
-        //println!("<<{}>> {}\n {}\n\n", memory::get(e.ptr).pointer.ptr, memory::get(e.ptr).contents.len(), e.to_string());
-    }
 
     let prolog_text = unsafe {
         match &prolog {

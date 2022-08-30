@@ -184,7 +184,6 @@ impl Element {
     }
 
     pub fn add_contents(&mut self, contents: Vec<Content>) {
-        //println!("!element.rs <<{}>> {} \n {}\n\n", self.pointer.ptr, self.contents.len(), self.to_string());
 
         for content in contents.into_iter() {
             match content {
@@ -197,7 +196,6 @@ impl Element {
             }
         }
 
-        //println!("!element.rs <<{}>> {} \n {}\n\n", self.pointer.ptr, self.contents.len(), self.to_string());
     }
 
     pub fn add_element_ptr(&mut self, element_ptr: ElementPtr) {
@@ -336,4 +334,11 @@ impl Element {
         )
     }
 
+}
+
+impl PartialEq for Element {
+    fn eq(&self, other: &Element) -> bool {
+        self.pointer.ptr != super::pointer::NULL
+        && self.pointer.ptr == other.pointer.ptr
+    }
 }
