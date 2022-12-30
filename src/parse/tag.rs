@@ -11,6 +11,7 @@ use crate::node::{
     raise_error
 };
 use crate::gstring::GString;
+use crate::utils::skip_whitespaces;
 
 // https://www.w3.org/TR/xml/#dt-element
 // empty_element_tag | start_tag content end_tag
@@ -46,18 +47,17 @@ pub fn get_end_tag_end_index(document: &[u16], index: usize) -> Option<usize> {
     else {
 
         match get_name_end_index(document, index + 2) {
-            Some(name_end_index) => if name_end_index + 1 >= document.len() {
-                None
-            } else if document[name_end_index + 1] == '>' as u16 {
-                Some(name_end_index + 1)
-            } else if is_whitespace(&document[name_end_index + 1]) {
-                if name_end_index + 2 < document.len() && document[name_end_index + 2] == '>' as u16 {
-                    Some(name_end_index + 2)
-                } else {
+            Some(name_end_index) => {
+                let whitespace_end_index = skip_whitespaces(document, name_end_index + 1);
+
+                if whitespace_end_index < document.len() && document[whitespace_end_index] == '>' as u16 {
+                    Some(whitespace_end_index)
+                }
+
+                else {
                     None
                 }
-            } else {
-                None
+
             },
             None => None
         }
@@ -77,61 +77,32 @@ pub fn get_start_tag_end_index(document: &[u16], index: usize) -> Option<usize> 
     else {
 
         match get_name_end_index(document, index + 1) {
-            Some(name_end_index) => if name_end_index + 1 >= document.len() {
-                None
-            } else if is_whitespace(&document[name_end_index + 1]) {
-                let mut curr_index = name_end_index + 1;
-                let mut curr_char = ' ' as u16;
+            Some(name_end_index) => {
+                let mut curr_index = name_end_index;
+                let mut whitespace_end_index;
 
                 loop {
+                    whitespace_end_index = skip_whitespaces(document, curr_index + 1);
 
-                    if curr_char == ' ' as u16 {
-
-                        if curr_index + 1 >= document.len() {
-                            return None;
-                        }
-
-                        else if document[curr_index + 1] == '>' as u16 {
-                            return Some(curr_index + 1);
-                        }
-
-                        match get_attribute_end_index(document, curr_index + 1) {
-                            Some(attribute_end_index) => {
-                                curr_char = 'a' as u16;
-                                curr_index = attribute_end_index;
-                            },
-                            None => { return None; }
-                        }
-
+                    if whitespace_end_index >= document.len() {
+                        return None;
                     }
 
-                    else if curr_char == 'a' as u16 {  // attribute
-                        
-                        if curr_index + 1 >= document.len() {
+                    else if document[whitespace_end_index] == '>' as u16 {
+                        return Some(whitespace_end_index);
+                    }
+
+                    match get_attribute_end_index(document, whitespace_end_index) {
+                        Some(i) => {
+                            curr_index = i;
+                        }
+                        None => {
                             return None;
                         }
-
-                        else if document[curr_index + 1] == '>' as u16 {
-                            return Some(curr_index + 1);
-                        }
-
-                        else if is_whitespace(&document[curr_index + 1]) {
-                            curr_char = ' ' as u16;
-                            curr_index += 1;
-                        }
-
-                        else {
-                            return None;
-                        }
-
                     }
 
                 }
 
-            } else if document[name_end_index + 1] == '>' as u16 {
-                Some(name_end_index + 1)
-            } else {
-                None
             },
             None => None
         }
@@ -151,61 +122,32 @@ pub fn get_empty_element_tag_end_index(document: &[u16], index: usize) -> Option
     else if document[index] == '<' as u16 {
 
         match get_name_end_index(document, index + 1) {
-            Some(name_end_index) => if name_end_index + 2 >= document.len() {
-                None
-            } else if is_whitespace(&document[name_end_index + 1]) {
-                let mut curr_index = name_end_index + 1;
-                let mut curr_char = ' ' as u16;
+            Some(name_end_index) => {
+                let mut curr_index = name_end_index;
+                let mut whitespace_end_index;
 
                 loop {
+                    whitespace_end_index = skip_whitespaces(document, curr_index + 1);
 
-                    if curr_char == ' ' as u16 {
-
-                        if curr_index + 2 >= document.len() {
-                            return None;
-                        }
-
-                        else if document[curr_index + 1] == '/' as u16 && document[curr_index + 2] == '>' as u16 {
-                            return Some(curr_index + 2);
-                        }
-
-                        match get_attribute_end_index(document, curr_index + 1) {
-                            Some(attribute_end_index) => {
-                                curr_char = 'a' as u16;
-                                curr_index = attribute_end_index;
-                            },
-                            None => { return None; }
-                        }
-
+                    if whitespace_end_index + 1 >= document.len() {
+                        return None;
                     }
 
-                    else if curr_char == 'a' as u16 {  // attribute
-                        
-                        if curr_index + 2 >= document.len() {
+                    else if document[whitespace_end_index] == '/' as u16 && document[whitespace_end_index + 1] == '>' as u16 {
+                        return Some(whitespace_end_index + 1);
+                    }
+
+                    match get_attribute_end_index(document, whitespace_end_index) {
+                        Some(i) => {
+                            curr_index = i;
+                        }
+                        None => {
                             return None;
                         }
-
-                        else if document[curr_index + 1] == '/' as u16 && document[curr_index + 2] == '>' as u16 {
-                            return Some(curr_index + 2);
-                        }
-
-                        else if is_whitespace(&document[curr_index + 1]) {
-                            curr_char = ' ' as u16;
-                            curr_index += 1;
-                        }
-
-                        else {
-                            return None;
-                        }
-
                     }
 
                 }
 
-            } else if document[name_end_index + 1] == '/' as u16 && document[name_end_index + 2] == '>' as u16 {
-                Some(name_end_index + 2)
-            } else {
-                None
             },
             None => None
         }
@@ -354,7 +296,10 @@ mod tests {
                 ("not an empty_element_tag", None),
                 ("<br/>", Some(4)),
                 ("<br />", Some(5)),
+                ("<br  />", Some(6)),
                 ("<img src=\"sample.png\" />", Some(23)),
+                ("<img  src=\"sample.png\" />", Some(24)),
+                ("<img  src=\"sample.png\"  />", Some(25)),
                 ("<img src=\"sample.png\">", None),
             ],
             get_empty_element_tag_end_index
@@ -368,6 +313,8 @@ mod tests {
                 ("not an end_tag", None),
                 ("</태그>", Some(4)),
                 ("</div>", Some(5)),
+                ("</div >", Some(6)),
+                ("</div  >", Some(7)),
                 ("<태그>", None),
                 ("<div>", None),
             ],
@@ -382,6 +329,13 @@ mod tests {
                 ("not a start_tag", None),
                 ("<태그>", Some(3)),
                 ("<div>", Some(4)),
+                ("<div id=\"1\">", Some(11)),
+                ("<div id=\"1\" >", Some(12)),
+                ("<div  id=\"1\">", Some(12)),
+                ("<div id=\"1\"  >", Some(13)),
+                ("<div   id=\"1\">", Some(13)),
+                ("<div >", Some(5)),
+                ("<div  >", Some(6)),
                 ("<&>", None),
                 ("<&amp;>", None),
             ],

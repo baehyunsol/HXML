@@ -31,6 +31,7 @@ pub fn is_valid_char(c: &u16) -> bool {
 }
 
 // https://www.w3.org/TR/xml/#NT-S
+#[inline]
 pub fn is_whitespace(c: &u16) -> bool {
     *c == 0x20 ||
     *c == 0x9  ||
@@ -38,18 +39,22 @@ pub fn is_whitespace(c: &u16) -> bool {
     *c == 0xd
 }
 
+#[inline]
 pub fn is_alpha_low(c: &u16) -> bool {
     'a' as u16 <= *c && *c <= 'z' as u16
 }
 
+#[inline]
 pub fn is_alpha_cap(c: &u16) -> bool {
     'A' as u16 <= *c && *c <= 'Z' as u16
 }
 
+#[inline]
 pub fn is_numeric(c: &u16) -> bool {
     '0' as u16 <= *c && *c <= '9' as u16
 }
 
+#[inline]
 pub fn is_hexadecimal(c: &u16) -> bool {
     is_numeric(c) ||
     'a' as u16 <= *c && *c <= 'f' as u16 ||

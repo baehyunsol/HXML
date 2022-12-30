@@ -6,7 +6,7 @@ use crate::predicate::{
     is_numeric,
     is_whitespace,
 };
-use crate::utils::{from_v16, into_v16};
+use crate::utils::{from_v16, into_v16, skip_whitespaces};
 
 // https://www.w3.org/TR/xml/#NT-prolog
 // xml_decl? miscellaneous* (doctype_decl miscellaneous*)?
@@ -71,7 +71,7 @@ pub fn get_miscellaneous_end_index(document: &[u16], index: usize) -> Option<usi
     match get_comment_end_index(document, index) {
         None => match get_processing_instruction_end_index(document, index) {
             None => if is_whitespace(&document[index]) {
-                Some(index)
+                Some(skip_whitespaces(document, index) - 1)
             } else {
                 None
             },
@@ -113,9 +113,7 @@ pub fn get_xml_decl_end_index(document: &[u16], mut index: usize) -> Option<usiz
         None => {}
     }
 
-    if index + 1 < document.len() && is_whitespace(&document[index + 1]) {
-        index += 1;
-    }
+    index = skip_whitespaces(document, index);
 
     if index + 2 < document.len() && document[index + 1] == '?' as u16 && document[index + 2] == '>' as u16 {
         Some(index + 2)
@@ -131,14 +129,17 @@ pub fn get_xml_decl_end_index(document: &[u16], mut index: usize) -> Option<usiz
 // whitespace 'version' eq ("'" version_num "'" | '"' version_num '"')
 pub fn get_version_info_end_index(document: &[u16], mut index: usize) -> Option<usize> {
 
-    if index >= document.len()
-        || !is_whitespace(&document[index])
-        || &document[index + 1..index + 8] != into_v16("version")
-    {
+    if index >= document.len() || !is_whitespace(&document[index]) {
         return None;
     }
 
-    index += 8;
+    index = skip_whitespaces(document, index);
+
+    if index >= document.len() || &document[index..(index + 7)] != into_v16("version") {
+        return None;
+    }
+
+    index += 7;
 
     match get_eq_end_index(document, index + 1) {
         Some(eq_end_index) => {
@@ -190,14 +191,17 @@ pub fn get_version_num_end_index(document: &[u16], mut index: usize) -> Option<u
 // whitespace 'standalone' eq (("'" ('yes' | 'no') "'") | ('"' ('yes' | 'no') '"'))
 pub fn get_sd_decl_end_index(document: &[u16], mut index: usize) -> Option<usize> {
 
-    if index + 11 > document.len()
-        || !is_whitespace(&document[index])
-        || &document[(index + 1)..(index + 11)] != &into_v16("standalone")
-    {
+    if index + 11 > document.len() || !is_whitespace(&document[index]) {
         return None;
     }
 
-    index += 11;
+    index = skip_whitespaces(document, index);
+
+    if index >= document.len() || &document[index..(index + 10)] != &into_v16("standalone") {
+        return None;
+    }
+
+    index += 10;
 
     index = match get_eq_end_index(document, index) {
         None => { return None; }
@@ -226,14 +230,17 @@ pub fn get_sd_decl_end_index(document: &[u16], mut index: usize) -> Option<usize
 // whitespace 'encoding' eq ('"' encoding_name '"' | "'" encoding_name "'" )
 pub fn get_encoding_decl_end_index(document: &[u16], mut index: usize) -> Option<usize> {
 
-    if index + 9 >= document.len()
-        || !is_whitespace(&document[index])
-        || &document[(index + 1)..(index + 9)] != &into_v16("encoding")
-    {
+    if index + 9 >= document.len() || !is_whitespace(&document[index]) {
         return None;
     }
 
-    index += 9;
+    index = skip_whitespaces(document, index);
+
+    if index >= document.len()|| &document[index..(index + 8)] != &into_v16("encoding") {
+        return None;
+    }
+
+    index += 8;
 
     index = match get_eq_end_index(document, index) {
         None => { return None; }
@@ -299,14 +306,11 @@ pub fn get_encoding_name_end_index(document: &[u16], mut index: usize) -> Option
 // '<!DOCTYPE' whitespace name (whitespace ExternalID)? whitespace? ('[' internal_subset ']' whitespace?)? '>'
 pub fn get_doctype_decl_end_index(document: &[u16], mut index: usize) -> Option<usize> {
 
-    if index + 11 >= document.len()
-        || &document[index..index + 9] != into_v16("<!DOCTYPE")
-        || !is_whitespace(&document[index + 9])
-    {
+    if index + 11 >= document.len() || &document[index..(index + 10)] != into_v16("<!DOCTYPE ") {
         return None;
     }
 
-    index += 10;
+    index = skip_whitespaces(document, index + 10);
 
     match get_name_end_index(document, index + 1) {
         Some(name_end_index) => if name_end_index + 1 >= document.len() {

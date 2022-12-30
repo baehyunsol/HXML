@@ -79,46 +79,13 @@ mod tests {
     #[test]
     fn file_test() {
 
-        let mut f = File::open("test.html").unwrap();
+        let mut f = File::open("test2.html").unwrap();
         let mut s = String::new();
 
         f.read_to_string(&mut s).unwrap();
 
         crate::into_dom(s).unwrap();
         crate::dom::some_checks().unwrap();
-
-        let images = crate::dom::get_elements_by_tag_name(None, "img".to_string());
-
-        if images.len() > 0 {
-
-            for img in images.iter() {
-
-                match img.get_attribute("src".to_string()) {
-                    Some(src) => {
-                        img.set_attribute("onclick".to_string(), format!("open_modal_img('{}');", src));
-                    },
-                    _ => {}
-                }
-
-            }
-
-            let body = crate::dom::get_element_by_tag_name(None, "body".to_string()).unwrap();
-            let modal_box = "<div id=\"modal-box\"><div id=\"close-button\">Click the image to close.</div><img id=\"modal-img\" onclick=\"close_modal_img();\"/></div><script>/*<![CDATA[*/var modal_box = document.getElementById(\"modal-box\");var modal_img = document.getElementById(\"modal-img\");
-function open_modal_img(src) {
-    modal_img.src = src;
-    modal_box.style.display = \"block\";
-}
-function close_modal_img() {
-    modal_box.style.display = \"none\";
-}/*]]>*/</script>".to_string();
-
-            let xx = crate::node::element::Content::from_string(modal_box).unwrap();
-
-            body.add_contents(xx);
-        }
-
-        let mut f = File::create("test copy.html").unwrap();
-        f.write_all(crate::dom::to_string().as_bytes()).unwrap();
     }
 
 }

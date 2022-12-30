@@ -1,4 +1,4 @@
-use crate::predicate::{is_hexadecimal, is_numeric};
+use crate::predicate::{is_hexadecimal, is_numeric, is_whitespace};
 
 pub fn into_v16(s: &str) -> Vec<u16> {
     String::from(s).encode_utf16().collect()
@@ -89,6 +89,17 @@ pub fn to_lower(s: &[u16]) -> Vec<u16> {
             *c
         }
     ).collect()
+}
+
+// returns the index of the first non-whitespace character
+// if it meets EOF, it returns the length of `s`
+pub fn skip_whitespaces(s: &[u16], mut index: usize) -> usize {
+
+    while index < s.len() && is_whitespace(&s[index]) {
+        index += 1;
+    }
+
+    index
 }
 
 #[cfg(test)]

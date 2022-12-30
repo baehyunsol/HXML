@@ -30,7 +30,7 @@ pub fn get_entity_reference_end_index(document: &[u16], index: usize) -> Option<
 
 // https://www.w3.org/TR/xml/#NT-CharRef
 // '&#' [0-9]+ ';' | '&#x' [0-9a-fA-F]+ ';'
-// TODO: a character referred to using char-ref must be a valid character
+// TODO: some characters (eg. emojis) are beyond the u16 limit
 pub fn get_char_reference_end_index(document: &[u16], mut index: usize) -> Option<usize> {
 
     if index + 3 >= document.len() || document[index] != '&' as u16 || document[index + 1] != '#' as u16 {
