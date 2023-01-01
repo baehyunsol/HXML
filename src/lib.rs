@@ -79,7 +79,7 @@ mod tests {
     #[test]
     fn file_test() {
 
-        let mut f = File::open("test2.html").unwrap();
+        let mut f = File::open("test.html").unwrap();
         let mut s = String::new();
 
         f.read_to_string(&mut s).unwrap();

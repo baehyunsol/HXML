@@ -1,6 +1,7 @@
 use super::element::Element;
 use super::pointer::ElementPtr;
 
+// IT'S NOT THREAD-SAFE!!!!
 static mut FREE_LIST: Vec<usize> = vec![];
 pub static mut ELEMENTS: Vec<Element> = vec![];
 
@@ -15,6 +16,11 @@ pub fn delete(pointer: ElementPtr) {
     unsafe {
         ELEMENTS[pointer.ptr].is_alive = false;
         FREE_LIST.push(pointer.ptr);
+
+        for child in pointer.get_children().into_iter() {
+            delete(child);
+        }
+
     }
 }
 

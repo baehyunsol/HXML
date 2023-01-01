@@ -76,7 +76,7 @@ pub fn get_content_end_index(content: &[u16], index: usize) -> Option<usize> {
 }
 
 // https://www.w3.org/TR/xml/#NT-CharData
-// The standard XML spec allows a 0-length char_data, but this parser does not
+// TODO: The standard XML spec allows a 0-length char_data, but this parser does not
 // [^<&]* - ([^<&]* ']]>' [^<&]*)
 pub fn get_char_data_end_index(content: &[u16], index: usize) -> Option<usize> {
 

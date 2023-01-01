@@ -49,6 +49,16 @@ impl ElementPtr {
     }
 
     #[inline]
+    pub fn delete_child_element(&self, child: ElementPtr) {
+        memory::get_mut(self.ptr).delete_child_element(child);
+    }
+
+    #[inline]
+    pub fn get_children(&self) -> Vec<ElementPtr> {
+        memory::get(self.ptr).get_children()
+    }
+
+    #[inline]
     pub fn set_parent(&self, parent: ElementPtr) {
         memory::get_mut(self.ptr).set_parent(parent);
     }

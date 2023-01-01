@@ -12,7 +12,7 @@ use crate::parse::{parse_content, parse_element};
 use crate::utils::into_v16;
 use std::collections::HashSet;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Content {
     Element(ElementPtr),
     CharData(String),
@@ -124,20 +124,22 @@ pub struct Element {
 impl Element {
 
     pub fn new(tag_name: String, attributes: Vec<Attribute>, empty_element: bool, contents: Vec<Content>) -> ElementPtr {
-
         let mut id = None;
         let mut classes = vec![];
+        let mut attributes_without_id_and_classes = Vec::with_capacity(attributes.len());
 
-        for attribute in attributes.iter() {
+        for attribute in attributes.into_iter() {
 
-            if attribute.name == String::from("id") {
+            if attribute.name == "id".to_string() {
                 id = Some(attribute.value.clone());
-                break;
             }
 
-            else if attribute.name == String::from("class") {
+            else if attribute.name == "class".to_string() {
                 classes = attribute.value.split(" ").map(|c| c.to_string()).collect();
-                break;
+            }
+
+            else {
+                attributes_without_id_and_classes.push(attribute);
             }
 
         }
@@ -146,7 +148,8 @@ impl Element {
             pointer: ElementPtr::null(),
             parent: None,
             is_alive: true,
-            tag_name, attributes, empty_element, contents,
+            tag_name, empty_element, contents,
+            attributes: attributes_without_id_and_classes,
             id, classes
         };
 
@@ -198,6 +201,23 @@ impl Element {
 
     }
 
+    // it does nothing if `element_ptr` is not a child of `self`
+    pub fn delete_child_element(&mut self, element_ptr: ElementPtr) {
+        let deletion_indexes = self.contents.iter().enumerate().filter(
+            |(_, content)| content == &&Content::Element(element_ptr)
+        ).map(
+            |(ind, _)| ind
+        ).collect::<Vec<usize>>();
+
+        let deletion_index = if deletion_indexes.len() == 0 {
+            return;
+        } else {
+            deletion_indexes[0]
+        };
+
+        self.contents.remove(deletion_index);
+    }
+
     pub fn add_element_ptr(&mut self, element_ptr: ElementPtr) {
         element_ptr.set_parent(self.pointer);
         self.contents.push(Content::Element(element_ptr));
@@ -208,6 +228,19 @@ impl Element {
     }
 
     pub fn get_attribute(&self, attribute: String) -> Option<String> {
+
+        if attribute == "id".to_string() {
+            return self.id.clone();
+        }
+
+        else if attribute == "class".to_string() {
+
+            return if self.classes.len() > 0 {
+                Some(self.classes.join(" "))
+            } else {
+                None
+            };
+        }
 
         for att in self.attributes.iter() {
 
@@ -220,7 +253,19 @@ impl Element {
         None
     }
 
+    // TODO: add_class, remove_class, toggle_class
+
     pub fn set_attribute(&mut self, attribute: String, value: String) {
+
+        if attribute == "id".to_string() {
+            self.id = Some(value);
+            return;
+        }
+
+        else if attribute == "class".to_string() {
+            self.classes = value.split(" ").map(|c| c.to_string()).collect();
+            return;
+        }
 
         for att in self.attributes.iter_mut() {
 
@@ -287,7 +332,7 @@ impl Element {
         result
     }
 
-    // root element는 이거 꼭 호출해서 init해줘야 함.
+    // it has to be called when initializing the root node
     pub fn set_parent_recursive(&mut self) {
 
         for child in self.get_children() {
@@ -299,7 +344,7 @@ impl Element {
 
     pub fn to_string(&self) -> String {
         let inside_tag = format!(
-            "{}{}{}",
+            "{}{}{}{}{}",
             self.tag_name,
             if self.attributes.len() == 0 {
                 ""
@@ -308,7 +353,16 @@ impl Element {
             },
             self.attributes.iter().map(
                 |att| format!("{}=\"{}\"", att.name, att.value)
-            ).collect::<Vec<String>>().join(" ")
+            ).collect::<Vec<String>>().join(" "),
+            match &self.id {
+                Some(id) => format!(" id=\"{}\"", id),
+                _ => String::new()
+            },
+            if self.classes.len() == 0 {
+                String::new()
+            } else {
+                format!(" class=\"{}\"", self.classes.join(" "))
+            }
         );
         let opening_tag = format!(
             "<{}{}",
@@ -324,7 +378,7 @@ impl Element {
         } else {
             format!("</{}>", self.tag_name)
         };
-        let contents = self.contents.iter().map(|c| c.to_string()).collect::<Vec<String>>().concat();
+        let contents = self.get_inner_string();
 
         format!(
             "{}{}{}",
@@ -332,6 +386,11 @@ impl Element {
             contents,
             closing_tag
         )
+    }
+
+    #[inline]
+    pub fn get_inner_string(&self) -> String {
+        self.contents.iter().map(|c| c.to_string()).collect::<Vec<String>>().concat()
     }
 
 }

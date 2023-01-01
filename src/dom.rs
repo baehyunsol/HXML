@@ -68,6 +68,18 @@ pub fn get_ids(elements: Option<Vec<ElementPtr>>) -> Vec<String> {
 
 }
 
+pub fn delete(element: ElementPtr) {
+
+    match element.get_parent() {
+        Some(p) => {
+            p.delete_child_element(element);
+        }
+        _ => {}
+    }
+
+    memory::delete(element);
+}
+
 /// if `elements` is None, it searches the entire DOM.
 pub fn get_elements_by_tag_name(elements: Option<Vec<ElementPtr>>, tag_name: String) -> Vec<ElementPtr> {
 

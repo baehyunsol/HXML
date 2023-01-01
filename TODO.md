@@ -1,8 +1,3 @@
-script가 여러개 있으면 하나로 합치기!
-- 이러려면 element를 삭제하는 기능을 추가해야함
-
----
-
 link로 돼 있는 css랑 js를 파일에 직접 때려박기! dependency 없는 html로 만드는 거임!
 
 css랑 js를 읽는 기능은 필요없음! css랑 js를 찾고 대체하는 건 engine이 할 거고 HXML은 관련 API만 적용해주면 됨 (css, js 찾기, 내용 읽기, 합치기 등등등...)
