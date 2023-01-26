@@ -15,21 +15,24 @@ pub use node::prolog::Prolog;
 use node::{
     reset_errors,
     read_errors,
-    memory::{self, allocate}
+    memory
 };
 use parse::{get_prolog_end_index, parse_element, parse_prolog};
 use utils::into_v16;
 use gstring::set_global_string;
+use std::collections::HashMap;
 
 /// It's global.
 /// You can't handle multiple doms at once.
 /// It frees all the elements created before.
 pub fn into_dom(document: String) -> Result<(), Vec<String>> {
-
     memory::init();
 
     unsafe {
-        dom::prolog = None;
+        dom::PROLOG = None;
+        dom::TAGS_BY_NAME = Some(HashMap::new());
+        dom::TAGS_BY_ID = Some(HashMap::new());
+        dom::TAGS_BY_CLASS = Some(HashMap::new());
     }
 
     let document = into_v16(&document);
@@ -41,7 +44,7 @@ pub fn into_dom(document: String) -> Result<(), Vec<String>> {
     match get_prolog_end_index(&document, curr_index) {
         Some(end_index) => {
             unsafe {
-                dom::prolog = Some(parse_prolog(&document, curr_index).0);
+                dom::PROLOG = Some(parse_prolog(&document, curr_index).0);
             }
             curr_index = end_index + 1;
         },
@@ -74,7 +77,6 @@ pub fn into_dom(document: String) -> Result<(), Vec<String>> {
 mod tests {
     use std::fs::File;
     use std::io::{Read, Write};
-    use crate::node::memory::*;
 
     #[test]
     fn file_test() {

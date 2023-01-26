@@ -1,5 +1,5 @@
 use super::memory;
-use super::element::{Content, Element};
+use super::element::Content;
 
 #[derive(Copy, Clone, Debug)]
 pub struct ElementPtr {

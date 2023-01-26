@@ -5,3 +5,11 @@ css랑 js를 읽는 기능은 필요없음! css랑 js를 찾고 대체하는 건
 ---
 
 class랑 id로 검색할 일이 많잖아? 걔네를 위해서 table을 만들어둘까?? 그럼 검색이 O(n)에서 O(log m)이 되겠지 (n은 node의 개수 m은 table의 크기)
+
+이게 훨씬 빠름 무조건 이걸로 ㄱㄱ
+
+RawElement::to_real 하면서 어차피 모든 elem을 순회하거든? 그 과정에서 table에 추가 ㄱㄱ
+
+---
+
+thread-safe해야 병렬화가 가능함...

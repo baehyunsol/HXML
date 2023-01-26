@@ -2,9 +2,11 @@ use super::{
     attribute::Attribute,
     read_errors, reset_errors
 };
-use super::memory::{
-    self,
-    allocate, get_mut
+use super::memory::{self, allocate};
+use crate::dom::{
+    TAGS_BY_CLASS,
+    TAGS_BY_ID,
+    TAGS_BY_NAME,
 };
 use super::pointer::ElementPtr;
 use crate::gstring::set_global_string;
@@ -148,12 +150,52 @@ impl Element {
             pointer: ElementPtr::null(),
             parent: None,
             is_alive: true,
-            tag_name, empty_element, contents,
+            tag_name: tag_name.clone(),
+            empty_element, contents,
             attributes: attributes_without_id_and_classes,
-            id, classes
+            id: id.clone(),
+            classes: classes.clone()
         };
 
-        allocate(result)
+        let result_ptr = allocate(result);
+
+        unsafe {
+            let tags_by_name = TAGS_BY_NAME.as_mut().unwrap();
+            let tags_by_id = TAGS_BY_ID.as_mut().unwrap();
+            let tags_by_class = TAGS_BY_CLASS.as_mut().unwrap();
+
+            match tags_by_name.get_mut(&tag_name) {
+                Some(v) => {
+                    v.push(result_ptr);
+                }
+                _ => {
+                    tags_by_name.insert(tag_name, vec![result_ptr]);
+                }
+            }
+
+            for class in classes.into_iter() {
+
+                match tags_by_class.get_mut(&class) {
+                    Some(v) => {
+                        v.push(result_ptr);
+                    }
+                    _ => {
+                        tags_by_class.insert(class, vec![result_ptr]);
+                    }
+                }
+
+            }
+
+            match id {
+                Some(id) => {
+                    tags_by_id.insert(id, result_ptr);
+                }
+                _ => {}
+            }
+
+        }
+
+        result_ptr
     }
 
     pub fn from_string(string: String) -> Result<ElementPtr, Vec<String>> {
@@ -168,9 +210,7 @@ impl Element {
                 result.set_parent_recursive();
                 return Ok(result);
             },
-            None => {
-                return Err(vec![String::from("Failed to parse an element!")]);
-            }
+            None => {}
         }
 
         let errors = read_errors();

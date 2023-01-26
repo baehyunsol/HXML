@@ -1,6 +1,5 @@
 use super::attribute::Attribute;
 use super::element::{Element, Content};
-use super::memory::allocate;
 use super::pointer::ElementPtr;
 use crate::gstring::GString;
 

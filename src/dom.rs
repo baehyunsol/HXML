@@ -1,12 +1,16 @@
 use crate::node::{
-    element::Element,
     memory::{ELEMENTS, self},
     pointer::ElementPtr,
     prolog::Prolog
 };
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 
-pub static mut prolog: Option<Prolog> = None;
+pub static mut PROLOG: Option<Prolog> = None;
+
+// Rust doesn't let me declare a global mutable hashmap
+pub static mut TAGS_BY_NAME: Option<HashMap<String, Vec<ElementPtr>>> = None;
+pub static mut TAGS_BY_ID: Option<HashMap<String, ElementPtr>> = None;
+pub static mut TAGS_BY_CLASS: Option<HashMap<String, Vec<ElementPtr>>> = None;
 
 pub fn get_all_elements() -> Vec<ElementPtr> {
     unsafe {
@@ -20,17 +24,7 @@ pub fn get_element_by_id(elements: Option<Vec<ElementPtr>>, id: String) -> Optio
     match elements {
         None => {
             unsafe {
-                for element in ELEMENTS.iter_mut() {
-
-                    if !element.is_alive || element.id.is_none() {
-                        continue;
-                    }
-
-                    if element.id.as_ref().unwrap() == &id {
-                        return Some(element.pointer);
-                    }
-
-                }
+                return TAGS_BY_ID.as_ref().unwrap().get(&id).copied();
             }
         }
         Some(elements) => {
@@ -55,13 +49,7 @@ pub fn get_ids(elements: Option<Vec<ElementPtr>>) -> Vec<String> {
 
     match elements {
         None => unsafe {
-            ELEMENTS.iter().filter_map(|e|
-                if !e.is_alive || e.id.is_none() {
-                    None
-                } else {
-                    e.id.clone()
-                }
-            ).collect()
+            TAGS_BY_ID.as_ref().unwrap().keys().map(|id| id.to_string()).collect()
         }
         Some(elements) => elements.into_iter().filter_map(|e| memory::get(e.ptr).id.clone()).collect()
     }
@@ -69,6 +57,49 @@ pub fn get_ids(elements: Option<Vec<ElementPtr>>) -> Vec<String> {
 }
 
 pub fn delete(element: ElementPtr) {
+    let el = memory::get(element.ptr);
+
+    unsafe {
+
+        match &el.id {
+            Some(id) => {
+                TAGS_BY_ID.as_mut().unwrap().remove(id);
+            }
+            _ => {}
+        }
+
+        for class in el.classes.iter() {
+            let tags = TAGS_BY_CLASS.as_mut().unwrap().get_mut(class).unwrap();
+            let mut tag_ind = 0;
+
+            for ind in 0..tags.len() {
+
+                if tags[ind] == element {
+                    tag_ind = ind;
+                    break;
+                }
+
+            }
+
+            #[cfg(test)] assert!(tags[tag_ind] == element);
+            tags.swap_remove(tag_ind);
+        }
+
+        let tags = TAGS_BY_NAME.as_mut().unwrap().get_mut(&el.tag_name).unwrap();
+        let mut tag_ind = 0;
+
+        for ind in 0..tags.len() {
+
+            if tags[ind] == element {
+                tag_ind = ind;
+                break;
+            }
+
+        }
+
+        #[cfg(test)] assert!(tags[tag_ind] == element);
+        tags.swap_remove(tag_ind);
+    }
 
     match element.get_parent() {
         Some(p) => {
@@ -85,7 +116,10 @@ pub fn get_elements_by_tag_name(elements: Option<Vec<ElementPtr>>, tag_name: Str
 
     match elements {
         None => unsafe {
-            ELEMENTS.iter().filter(|e| e.is_alive && e.tag_name == tag_name).map(|e| e.pointer).collect()
+            match TAGS_BY_NAME.as_ref().unwrap().get(&tag_name) {
+                Some(v) => v.to_vec(),
+                _ => vec![]
+            }
         },
         Some(elements) => elements.into_iter().filter(|e| memory::get(e.ptr).tag_name == tag_name).collect()
     }
@@ -99,13 +133,10 @@ pub fn get_element_by_tag_name(elements: Option<Vec<ElementPtr>>, tag_name: Stri
     match elements {
         None => unsafe {
 
-            for element in ELEMENTS.iter() {
-
-                if element.is_alive && element.tag_name == tag_name {
-                    return Some(element.pointer);
-                }
-
-            }
+            return match TAGS_BY_NAME.as_ref().unwrap().get(&tag_name) {
+                Some(v) if v.len() > 0 => Some(v[0]),
+                _ => None
+            };
 
         },
         Some(elements) => {
@@ -129,7 +160,10 @@ pub fn get_elements_by_class_name(elements: Option<Vec<ElementPtr>>, class_name:
 
     match elements {
         None => unsafe {
-            ELEMENTS.iter_mut().filter(|e| e.is_alive && e.classes.contains(&class_name)).map(|e| e.pointer).collect()
+            match TAGS_BY_CLASS.as_ref().unwrap().get(&class_name) {
+                Some(v) => v.to_vec(),
+                _ => vec![]
+            }
         },
         Some(elements) => elements.into_iter().filter(|e| memory::get(e.ptr).classes.contains(&class_name)).collect()
     }
@@ -164,7 +198,7 @@ pub fn get_root() -> ElementPtr {
 pub fn to_string() -> String {
 
     let prolog_text = unsafe {
-        match &prolog {
+        match &PROLOG {
             Some(p) => p.to_string(),
             None => String::new()
         }
