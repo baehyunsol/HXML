@@ -1,5 +1,5 @@
 use super::get_name_end_index;
-use crate::predicate::{is_numeric, is_hexadecimal, is_valid_char};
+use crate::predicate::{is_numeric, is_hexadecimal, is_valid_char_u32};
 use crate::utils::{to_int_dec, to_int_hex};
 
 // https://www.w3.org/TR/xml/#NT-Reference
@@ -51,7 +51,7 @@ pub fn get_char_reference_end_index(document: &[u16], mut index: usize) -> Optio
             let num_end_index = index;
 
             match to_int_hex(&document[num_begin_index..num_end_index]) {
-                Some(n) if n <= u16::MAX as u32 && is_valid_char(&(n as u16)) => Some(index),
+                Some(n) if is_valid_char_u32(&n) => Some(index),
                 _ => None
             }
 
@@ -74,7 +74,7 @@ pub fn get_char_reference_end_index(document: &[u16], mut index: usize) -> Optio
             let num_end_index = index;
 
             match to_int_dec(&document[num_begin_index..num_end_index]) {
-                Some(n) if n <= u16::MAX as u32 && is_valid_char(&(n as u16)) => Some(index),
+                Some(n) if is_valid_char_u32(&n) => Some(index),
                 _ => None
             }
 

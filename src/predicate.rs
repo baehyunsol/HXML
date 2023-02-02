@@ -30,6 +30,14 @@ pub fn is_valid_char(c: &u16) -> bool {
     //  || 0x10000 <= *c && *c <= 0x10ffff  // not u16
 }
 
+// https://www.w3.org/TR/xml/#NT-Char
+pub fn is_valid_char_u32(c: &u32) -> bool {
+    *c == 9 || *c == 10 || *c == 13 ||
+    0x20 <= *c && *c <= 0xd7ff ||
+    0xe000 <= *c && *c <= 0xfffd ||
+    0x10000 <= *c && *c <= 0x10ffff
+}
+
 // https://www.w3.org/TR/xml/#NT-S
 #[inline]
 pub fn is_whitespace(c: &u16) -> bool {
