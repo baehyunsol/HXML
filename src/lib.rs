@@ -76,10 +76,20 @@ pub fn into_dom(document: String) -> Result<(), Vec<String>> {
 #[cfg(test)]
 mod tests {
     use std::fs::File;
-    use std::io::{Read, Write};
+    use std::io::Read;
+    use crate::dom;
 
     #[test]
     fn file_test() {
+
+        let lock = unsafe {
+
+            if dom::LOCK.is_none() {
+                dom::LOCK = Some(std::sync::Mutex::new(()));
+            }
+
+            dom::LOCK.as_ref().unwrap().lock().unwrap()
+        };
 
         let mut f = File::open("test.html").unwrap();
         let mut s = String::new();
@@ -87,7 +97,9 @@ mod tests {
         f.read_to_string(&mut s).unwrap();
 
         crate::into_dom(s).unwrap();
-        crate::dom::some_checks().unwrap();
+        dom::some_checks().unwrap();
+
+        drop(lock);
     }
 
 }

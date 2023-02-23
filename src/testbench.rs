@@ -86,6 +86,12 @@ pub fn parse_valid_xml(xml: String, tags: Vec<String>, ids: Vec<String>) {
 
 #[test]
 fn xml_dom_test() {
+    let lock = unsafe {
+
+        while dom::LOCK.is_none() {}
+
+        dom::LOCK.as_ref().unwrap().lock().unwrap()
+    };
 
     let testcases: Vec<(&str, Vec<&str>, Vec<&str>)> = vec![
         ("<html></html>", vec!["html"], vec![]),
@@ -94,6 +100,8 @@ fn xml_dom_test() {
         ("<body><img src=\"a.jpg\"/><div id=\"div1\"><p>Paragraph 1</p><p>Paragraph 2</p></div><div><p>Paragraph 3</p><p>Paragraph 4</p></div></body>", vec!["div", "p"], vec!["div1"]),
         ("<body><img src=\"a.jpg\"/><div><p>Paragraph 3</p><p>Paragraph 4</p></div></body>", vec!["div", "p"], vec![]),
         ("<body><div class=\"a b c\" id=\"div1\"></div><div class=\"a c d\" id=\"div2\"></div><div id=\"div3\" class=\"b d f\"></div><div id=\"div4\" class=\"b d a\"></div></body>", vec!["div", "body"], vec!["div1", "div2", "div3", "div4"]),
+        ("<body><script>script1;</script><p>This is a paragraph</p><script src=\"src.js\"></script><script>script2;</script><script>script3;</script></body>", vec!["body", "script", "p"], vec![]),
+        ("<body><p>This is a paragraph</p><script src=\"src.js\"></script><script>script1;\nscript2;\nscript3;\n</script></body>", vec!["body", "script", "p"], vec![])
     ];
 
     // I'm too lazy to write `.to_string()` multiple times... haha
@@ -141,4 +149,27 @@ fn xml_dom_test() {
     assert!(class_c.contains(&div1) && class_c.contains(&div2) && !class_c.contains(&div3) && !class_c.contains(&div4));
     assert!(!class_d.contains(&div1) && class_d.contains(&div2) && class_d.contains(&div3) && class_d.contains(&div4));
     assert_eq!(dom::get_elements_by_class_name(None, "f".to_string()), vec![div3]);
+
+    let merge_test = testcases[6].0.clone();
+    into_dom(merge_test).unwrap();
+
+    let mut scripts = dom::get_elements_by_tag_name(None, "script".to_string());
+    scripts = scripts.iter().filter(|s| s.get_attributes().len() == 0).map(|s| *s).collect();
+    let mut merged_scripts = vec!["<script>".to_string()];
+
+    for script in scripts.into_iter() {
+        merged_scripts.push(script.get_inner_string());
+        merged_scripts.push("\n".to_string());
+        dom::delete(script);
+    }
+
+    merged_scripts.push("</script>".to_string());
+
+    let body = dom::get_element_by_tag_name(None, "body".to_string()).unwrap();
+    let new_script = crate::Content::from_string(merged_scripts.concat()).unwrap();
+    body.add_contents(new_script);
+
+    assert_eq!(dom::to_string(), testcases[7].0);
+
+    drop(lock);
 }

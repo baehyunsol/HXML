@@ -12,6 +12,9 @@ pub static mut TAGS_BY_NAME: Option<HashMap<String, Vec<ElementPtr>>> = None;
 pub static mut TAGS_BY_ID: Option<HashMap<String, ElementPtr>> = None;
 pub static mut TAGS_BY_CLASS: Option<HashMap<String, Vec<ElementPtr>>> = None;
 
+#[cfg(test)]
+pub static mut LOCK: Option<std::sync::Mutex<()>> = None;
+
 pub fn get_all_elements() -> Vec<ElementPtr> {
     unsafe {
         ELEMENTS.iter().filter(|e| e.is_alive).map(|e| e.pointer).collect()

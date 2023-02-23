@@ -1,5 +1,6 @@
 use super::memory;
 use super::element::Content;
+use super::attribute::Attribute;
 
 #[derive(Copy, Clone, Debug)]
 pub struct ElementPtr {
@@ -24,6 +25,11 @@ impl ElementPtr {
     }
 
     #[inline]
+    pub fn get_inner_string(&self) -> String {
+        memory::get(self.ptr).get_inner_string()
+    }
+
+    #[inline]
     pub fn add_element_ptr(&self, element_ptr: ElementPtr) {
         memory::get_mut(self.ptr).add_element_ptr(element_ptr);
     }
@@ -36,6 +42,11 @@ impl ElementPtr {
     #[inline]
     pub fn get_attribute(&self, attribute: String) -> Option<String> {
         memory::get_mut(self.ptr).get_attribute(attribute)
+    }
+
+    #[inline]
+    pub fn get_attributes(&self) -> &Vec<Attribute> {
+        &memory::get(self.ptr).attributes
     }
 
     #[inline]
