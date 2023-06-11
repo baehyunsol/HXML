@@ -226,6 +226,14 @@ impl Element {
         return Err(vec![String::from("No Elements have been found!")]);
     }
 
+    pub fn get_contents(&self) -> &Vec<Content> {
+        &self.contents
+    }
+
+    pub fn get_contents_mut(&mut self) -> &mut Vec<Content> {
+        &mut self.contents
+    }
+
     pub fn add_contents(&mut self, contents: Vec<Content>) {
 
         for content in contents.into_iter() {

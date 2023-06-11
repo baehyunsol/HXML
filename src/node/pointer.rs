@@ -7,7 +7,7 @@ pub struct ElementPtr {
     pub ptr: usize
 }
 
-pub const NULL: usize = 0x100_000;
+pub const NULL: usize = 0x1_000_000;
 
 impl ElementPtr {
 
@@ -32,6 +32,16 @@ impl ElementPtr {
     #[inline]
     pub fn add_element_ptr(&self, element_ptr: ElementPtr) {
         memory::get_mut(self.ptr).add_element_ptr(element_ptr);
+    }
+
+    #[inline]
+    pub fn get_contents(&self) -> &Vec<Content> {
+        memory::get(self.ptr).get_contents()
+    }
+
+    #[inline]
+    pub fn get_contents_mut(&self) -> &mut Vec<Content> {
+        memory::get_mut(self.ptr).get_contents_mut()
     }
 
     #[inline]
