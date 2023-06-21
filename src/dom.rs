@@ -7,13 +7,12 @@ use std::collections::{HashSet, HashMap};
 
 pub static mut PROLOG: Option<Prolog> = None;
 
-// Rust doesn't let me declare a global mutable hashmap
 pub static mut TAGS_BY_NAME: Option<HashMap<String, Vec<ElementPtr>>> = None;
 pub static mut TAGS_BY_ID: Option<HashMap<String, ElementPtr>> = None;
 pub static mut TAGS_BY_CLASS: Option<HashMap<String, Vec<ElementPtr>>> = None;
 
 #[cfg(test)]
-pub static mut LOCK: Option<std::sync::Mutex<()>> = None;
+pub static mut LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 pub fn get_all_elements() -> Vec<ElementPtr> {
     unsafe {

@@ -5,12 +5,10 @@ use super::{
     get_cd_sect_end_index,
     attribute::parse_attribute
 };
-use crate::predicate::is_whitespace;
-use crate::node::{
-    raw_element::{RawContent, RawElement},
-    raise_error
-};
+use crate::err::{raise_error, HxmlError};
 use crate::gstring::GString;
+use crate::node::raw_element::{RawContent, RawElement};
+use crate::predicate::is_whitespace;
 use crate::utils::skip_whitespaces;
 
 // https://www.w3.org/TR/xml/#dt-element
@@ -262,11 +260,12 @@ pub fn parse_element(document: &[u16], index: usize) -> Option<(RawElement, usiz
                     return Some((RawElement::new(name, attributes, false, contents), end_tag_end_index));
                 },
                 _ => {
-                    raise_error(format!(
-                        "{} tag doesn't have an end tag!\n...  {}  ...",
-                        name.to_string(),
-                        GString::new(index.max(12) - 12, (index + 18).min(document.len())).to_string()
-                    ));
+                    raise_error(
+                        HxmlError::new(
+                            format!("{} tag doesn't have an end tag!", name.to_string()),
+                            index
+                        )
+                    );
                     return None;
                 }
             }

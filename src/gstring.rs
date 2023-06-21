@@ -1,9 +1,9 @@
 use crate::utils::from_v16;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct GString {
-    start: usize,
-    end: usize
+    pub start: usize,
+    pub end: usize
 }
 
 pub static mut GLOBAL_STRING: Vec<u16> = vec![];
@@ -20,6 +20,10 @@ impl GString {
 
     pub fn new(start: usize, end: usize) -> Self {
         GString { start, end }
+    }
+
+    pub fn all() -> Self {
+        unsafe { GString { start: 0, end: GLOBAL_STRING.len() } }
     }
 
     pub fn to_vec(&self) -> Vec<u16> {

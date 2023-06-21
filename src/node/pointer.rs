@@ -15,6 +15,7 @@ impl ElementPtr {
         Self::new(NULL)
     }
 
+    #[inline]
     pub fn new(ptr: usize) -> Self {
         ElementPtr { ptr }
     }
@@ -60,6 +61,11 @@ impl ElementPtr {
     }
 
     #[inline]
+    pub fn get_tag_name(&self) -> String {
+        memory::get(self.ptr).tag_name.clone()
+    }
+
+    #[inline]
     pub fn set_attribute(&self, attribute: String, value: String) {
         memory::get_mut(self.ptr).set_attribute(attribute, value);
     }
@@ -77,6 +83,11 @@ impl ElementPtr {
     #[inline]
     pub fn get_children(&self) -> Vec<ElementPtr> {
         memory::get(self.ptr).get_children()
+    }
+
+    #[inline]
+    pub fn get_siblings(&self) -> Vec<ElementPtr> {
+        memory::get(self.ptr).get_siblings()
     }
 
     #[inline]

@@ -86,13 +86,6 @@ pub fn parse_valid_xml(xml: String, tags: Vec<String>, ids: Vec<String>) {
 
 #[test]
 fn xml_dom_test() {
-    let lock = unsafe {
-
-        while dom::LOCK.is_none() {}
-
-        dom::LOCK.as_ref().unwrap().lock().unwrap()
-    };
-
     let testcases: Vec<(&str, Vec<&str>, Vec<&str>)> = vec![
         ("<html></html>", vec!["html"], vec![]),
         ("<!DOCTYPE html><html><head></head><body></body></html>", vec!["head", "body"], vec![]),
@@ -113,6 +106,10 @@ fn xml_dom_test() {
             ids.into_iter().map(|id| id.to_string()).collect(),
         )
     ).collect();
+
+    let lock = unsafe {
+        dom::LOCK.lock().unwrap()
+    };
 
     for (xml, tags, ids) in testcases.clone().into_iter() {
         parse_valid_xml(xml, tags, ids);

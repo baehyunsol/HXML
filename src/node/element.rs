@@ -1,14 +1,12 @@
-use super::{
-    attribute::Attribute,
-    read_errors, reset_errors
-};
+use super::attribute::Attribute;
+use super::pointer::ElementPtr;
 use super::memory::{self, allocate};
 use crate::dom::{
     TAGS_BY_CLASS,
     TAGS_BY_ID,
     TAGS_BY_NAME,
 };
-use super::pointer::ElementPtr;
+use crate::err::{read_errors, reset_errors, HxmlError};
 use crate::gstring::set_global_string;
 use crate::parse::{parse_content, parse_element};
 use crate::utils::into_v16;
@@ -45,7 +43,7 @@ impl Content {
         Content::Reference(reference)
     }
 
-    pub fn from_string(string: String) -> Result<Vec<Content>, Vec<String>> {
+    pub fn from_string(string: String) -> Result<Vec<Content>, HxmlError> {
         let string_v16 = into_v16(&string);
         set_global_string(string_v16.clone());
         reset_errors();
@@ -70,7 +68,7 @@ impl Content {
                     curr_index = last_index + 1;
                 },
                 None => {
-                    return Err(vec![String::from("failed to parse an XML string...")]);
+                    return Err(HxmlError::new(String::from("failed to parse an XML string..."), usize::MAX));
                 }
             }
 
@@ -87,10 +85,10 @@ impl Content {
         reset_errors();
 
         if errors.len() > 0 {
-            return Err(errors);
+            return Err(errors[0].clone());
         }
 
-        return Err(vec![String::from("No Contents have been found!")]);
+        return Err(HxmlError::new(String::from("No contents have been found!"), usize::MAX));
     }
 
     pub fn to_string(&self) -> String {
@@ -108,19 +106,19 @@ impl Content {
 
 #[derive(Debug, Clone)]
 pub struct Element {
-    pub pointer: ElementPtr,
+    pub(crate) pointer: ElementPtr,
     parent: Option<ElementPtr>,
-    pub tag_name: String,
-    pub attributes: Vec<Attribute>,
+    pub(crate) tag_name: String,
+    pub(crate) attributes: Vec<Attribute>,
     empty_element: bool,
-    pub contents: Vec<Content>,
-    pub is_alive: bool,
+    pub(crate) contents: Vec<Content>,
+    pub(crate) is_alive: bool,
 
     /// for HTML
-    pub id: Option<String>,
+    pub(crate) id: Option<String>,
 
     /// for HTML
-    pub classes: Vec<String>
+    pub(crate) classes: Vec<String>
 }
 
 impl Element {
@@ -198,8 +196,7 @@ impl Element {
         result_ptr
     }
 
-    pub fn from_string(string: String) -> Result<ElementPtr, Vec<String>> {
-
+    pub fn from_string(string: String) -> Result<ElementPtr, HxmlError> {
         let string_v16 = into_v16(&string);
         set_global_string(string_v16.clone());
         reset_errors();
@@ -220,10 +217,10 @@ impl Element {
         reset_errors();
 
         if errors.len() > 0 {
-            return Err(errors);
+            return Err(errors[0].clone());
         }
 
-        return Err(vec![String::from("No Elements have been found!")]);
+        return Err(HxmlError::new(String::from("No Elements have been found!"), usize::MAX));
     }
 
     pub fn get_contents(&self) -> &Vec<Content> {
@@ -378,6 +375,20 @@ impl Element {
         }
 
         result
+    }
+
+    pub fn get_siblings(&self) -> Vec<ElementPtr> {
+
+        if let Some(parent) = self.get_parent() {
+            parent.get_children().into_iter().filter(
+                |c| *c != self.pointer
+            ).collect()
+        }
+
+        else {
+            vec![]
+        }
+
     }
 
     // it has to be called when initializing the root node
