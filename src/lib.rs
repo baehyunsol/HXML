@@ -15,7 +15,7 @@ pub use node::element::{Content, Element};
 pub use node::pointer::ElementPtr;
 pub use node::prolog::Prolog;
 
-use err::{reset_errors, read_errors, HxmlError};
+use err::{reset_errors, read_errors};
 use gstring::set_global_string;
 use node::memory;
 use utils::into_v16;
