@@ -130,11 +130,11 @@ impl Element {
 
         for attribute in attributes.into_iter() {
 
-            if attribute.name == "id".to_string() {
+            if attribute.name == "id" {
                 id = Some(attribute.value.clone());
             }
 
-            else if attribute.name == "class".to_string() {
+            else if attribute.name == "class" {
                 classes = attribute.value.split(" ").map(|c| c.to_string()).collect();
             }
 
@@ -274,11 +274,11 @@ impl Element {
 
     pub fn get_attribute(&self, attribute: String) -> Option<String> {
 
-        if attribute == "id".to_string() {
+        if attribute == "id" {
             return self.id.clone();
         }
 
-        else if attribute == "class".to_string() {
+        else if attribute == "class" {
 
             return if self.classes.len() > 0 {
                 Some(self.classes.join(" "))
@@ -302,12 +302,12 @@ impl Element {
 
     pub fn set_attribute(&mut self, attribute: String, value: String) {
 
-        if attribute == "id".to_string() {
+        if attribute == "id" {
             self.id = Some(value);
             return;
         }
 
-        else if attribute == "class".to_string() {
+        else if attribute == "class" {
             self.classes = value.split(" ").map(|c| c.to_string()).collect();
             return;
         }
@@ -391,8 +391,7 @@ impl Element {
 
     }
 
-    // it has to be called when initializing the root node
-    pub fn set_parent_recursive(&mut self) {
+    pub(crate) fn set_parent_recursive(&mut self) {
 
         for child in self.get_children() {
             child.set_parent(self.pointer);

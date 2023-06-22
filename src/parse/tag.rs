@@ -9,7 +9,7 @@ use crate::err::{raise_error, HxmlError};
 use crate::gstring::GString;
 use crate::node::raw_element::{RawContent, RawElement};
 use crate::predicate::is_whitespace;
-use crate::utils::skip_whitespaces;
+use crate::utils::{skip_whitespaces, from_v16};
 
 // https://www.w3.org/TR/xml/#dt-element
 // empty_element_tag | start_tag content end_tag
@@ -158,6 +158,12 @@ pub fn get_empty_element_tag_end_index(document: &[u16], index: usize) -> Option
 
 }
 
+pub fn is_malformed_tag(document: &[u16], index: usize) -> bool {
+    index < document.len() && document[index] == '<' as u16
+    && get_start_tag_end_index(document, index).is_none()
+    && get_empty_element_tag_end_index(document, index).is_none()
+}
+
 // it assumes that the tag is valid
 pub fn parse_tag(document: &[u16], index: usize) -> ((GString, Vec<(GString, GString)>), usize) {  // ((name, Vec<(att_name, Vec<att_value>)>), end_index)
 
@@ -245,9 +251,9 @@ pub fn parse_element(document: &[u16], index: usize) -> Option<(RawElement, usiz
     }
 
     match get_start_tag_end_index(document, index) {
-        Some(tag_end_index) => {
+        Some(start_tag_end_index) => {
             let ((name, attributes), _) = parse_tag(document, index);
-            let mut curr_index = tag_end_index + 1;
+            let mut curr_index = start_tag_end_index + 1;
             let mut contents = vec![];
 
             while let Some((content, content_end_index)) = parse_content(document, curr_index) {
@@ -259,10 +265,24 @@ pub fn parse_element(document: &[u16], index: usize) -> Option<(RawElement, usiz
                 Some(end_tag_end_index) if get_end_tag_name(document, curr_index) == name.to_vec() => {
                     return Some((RawElement::new(name, attributes, false, contents), end_tag_end_index));
                 },
+                None if is_malformed_tag(document, curr_index) => {
+                    raise_error(
+                        HxmlError::new(
+                            format!(
+                                "Malformed tag is found! If you're parsing an HTML document, be sure that it's a well-formed XML.",
+                            ),
+                            curr_index
+                        )
+                    );
+                    return None;
+                }
                 _ => {
                     raise_error(
                         HxmlError::new(
-                            format!("{} tag doesn't have an end tag!", name.to_string()),
+                            format!(
+                                "{} tag doesn't have an end tag!",
+                                from_v16(&document[index..(start_tag_end_index + 1)])
+                            ),
                             index
                         )
                     );
